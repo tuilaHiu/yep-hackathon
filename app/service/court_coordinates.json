@@ -1,0 +1,56 @@
+{
+  "court_corners": {
+    "top_left": [
+      722,
+      453
+    ],
+    "top_right": [
+      1180,
+      456
+    ],
+    "bottom_right": [
+      317,
+      967
+    ],
+    "bottom_left": [
+      1607,
+      960
+    ]
+  },
+  "net": {
+    "left": [
+      588,
+      570
+    ],
+    "right": [
+      1329,
+      572
+    ]
+  },
+  "all_points": {
+    "Court Top-Left": [
+      722,
+      453
+    ],
+    "Court Top-Right": [
+      1180,
+      456
+    ],
+    "Court Bottom-Right": [
+      317,
+      967
+    ],
+    "Court Bottom-Left": [
+      1607,
+      960
+    ],
+    "Net Left": [
+      588,
+      570
+    ],
+    "Net Right": [
+      1329,
+      572
+    ]
+  }
+}
