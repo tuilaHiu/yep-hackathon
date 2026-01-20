@@ -65,9 +65,9 @@ def crop_and_pad_frame(
     out_w = output_size["width"]
     out_h = output_size["height"]
 
-    # Get bbox coordinates
-    x1, y1 = bbox["x1"], bbox["y1"]
-    x2, y2 = bbox["x2"], bbox["y2"]
+    # Get bbox coordinates (ensure they are integers)
+    x1, y1 = int(bbox["x1"]), int(bbox["y1"])
+    x2, y2 = int(bbox["x2"]), int(bbox["y2"])
     bbox_w = x2 - x1
     bbox_h = y2 - y1
 
@@ -95,6 +95,10 @@ def crop_and_pad_frame(
     dst_y1 = src_y1 - crop_y1
     dst_x2 = dst_x1 + (src_x2 - src_x1)
     dst_y2 = dst_y1 + (src_y2 - src_y1)
+
+    # Ensure all indices are integers before slicing
+    indices = [src_x1, src_y1, src_x2, src_y2, dst_x1, dst_y1, dst_x2, dst_y2]
+    src_y1, src_y2, src_x1, src_x2, dst_y1, dst_y2, dst_x1, dst_x2 = map(int, [src_y1, src_y2, src_x1, src_x2, dst_y1, dst_y2, dst_x1, dst_x2])
 
     # Only copy if there's a valid region
     if src_x2 > src_x1 and src_y2 > src_y1:

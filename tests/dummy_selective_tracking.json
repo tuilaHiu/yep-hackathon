@@ -1,0 +1,39 @@
+{
+    "video_info": {
+        "source": "yep_pickleball.mp4",
+        "fps": 60,
+        "total_frames": 100,
+        "width": 1920,
+        "height": 1080
+    },
+    "selected_players": [
+        {
+            "name": "Trần Văn A",
+            "selection_id": 1,
+            "frames": {
+                "0": {
+                    "x1": 800,
+                    "y1": 600,
+                    "x2": 900,
+                    "y2": 1000
+                },
+                "1": {
+                    "x1": 805,
+                    "y1": 605,
+                    "x2": 905,
+                    "y2": 1005
+                }
+            },
+            "max_bbox": {
+                "width": 100,
+                "height": 400
+            },
+            "output_size": {
+                "width": 120,
+                "height": 480
+            },
+            "frame_count": 2,
+            "missing_frames": []
+        }
+    ]
+}

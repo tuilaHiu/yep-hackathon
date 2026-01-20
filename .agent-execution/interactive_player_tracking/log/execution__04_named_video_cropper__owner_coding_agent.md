@@ -1,0 +1,11 @@
+## [2026-01-20 11:55:00] Task: Named Video Cropper Implementation
+- **Action:** Create
+- **Files Affected:**
+  - `app/service/named_video_cropper.py`
+  - `tests/test_named_video_cropper.py`
+  - `tests/dummy_selective_tracking.json`
+- **Summary:** Implemented a specialized video cropper that generates separate videos for named players. Supports filename sanitization (removing diacritics), duplicate name handling (suffixes), and optional black frames for missing tracking data.
+- **Verify:** 
+  - `uv run python3 tests/test_named_video_cropper.py`
+  - `uv run python3 -m app.service.named_video_cropper --video video/yep_pickleball.mp4 --tracking tests/dummy_selective_tracking.json --output tests/output_test/`
+- **Status:** ✅ Success

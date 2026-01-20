@@ -1,0 +1,16 @@
+{
+  "video_source": "yep_pickleball.mp4",
+  "selection_frame": 0,
+  "players": [
+    {
+      "selection_id": 1,
+      "name": "test1",
+      "initial_bbox": {
+        "x1": 805,
+        "y1": 634,
+        "x2": 931,
+        "y2": 1046
+      }
+    }
+  ]
+}
