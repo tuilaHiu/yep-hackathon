@@ -10,3 +10,5 @@ wheels/
 .venv
 
 video/
+
+app/service/output_videos
