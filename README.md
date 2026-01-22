@@ -1,64 +1,65 @@
-# Yep Player Tracker
+# Yep Pickleball - Player Tracking & AI Coach Analysis
 
-Hệ thống theo vết người chơi (Player Tracking) tự động cho video thể thao (ví dụ: Pickleball). Hệ thống cho phép chọn người chơi cụ thể, theo vết họ suốt video và xuất ra các video đã được cắt riêng cho từng người.
+Hệ thống tích hợp theo vết người chơi (Player Tracking) và phân tích kỹ thuật bằng AI dành riêng cho môn Pickleball. Hệ thống cho phép chọn người chơi, theo vết tự động, trích xuất video riêng biệt và gửi cho Coach AI (LLM) để nhận xét kỹ thuật.
 
-## Luồng hoạt động (Workflow)
-1. **Selection**: Chọn người chơi từ một frame hình (qua giao diện GUI hoặc Terminal).
-2. **Tracking**: Tự động bám theo người chơi sử dụng model YOLO và thuật toán so khớp đặc trưng (spatial + color histogram).
-3. **Cropping**: Xuất video riêng biệt cho từng người chơi đã chọn.
+## 🚀 Luồng hoạt động (Workflow)
 
-## Cài đặt
+1.  **Selection**: Chọn người chơi cần theo dõi (qua Terminal hoặc GUI).
+2.  **Tracking**: Tự động bám theo người chơi suốt video sử dụng model YOLO (Pose/Detection) kết hợp Spatial & Color Histogram.
+3.  **Cropping**: Trích xuất video tập trung vào người chơi với kích thước cố định.
+4.  **AI Analysis**: Gửi video đã cắt cho AI (GPT-4o/GPT-5.2) để phân tích các động tác như Forehand, Backhand, Dink... và đưa ra bài tập cải thiện.
 
-Dự án sử dụng `uv` để quản lý dependency. Bạn có thể cài đặt môi trường bằng lệnh:
+## 🛠 Cài đặt
 
+Dự án sử dụng `uv` để quản lý dependency.
+
+1.  **Cài đặt môi trường**:
+    ```bash
+    uv sync
+    ```
+
+2.  **Cấu hình API Key**:
+    Tạo file `.env` ở thư mục gốc và thêm key OpenAI của bạn (Lưu ý tên biến môi trường trong code hiện tại là `OPENAI__API_KEY`):
+    ```env
+    OPENAI__API_KEY=your_openai_api_key_here
+    ```
+
+## 📖 Cách chạy
+
+### 1. Chạy toàn bộ Pipeline (Tracking + Analysis)
+Đây là cách nhanh nhất để lấy cả video track và kết quả phân tích AI.
 ```bash
-uv sync
+uv run python main.py --video video/your_video.mp4
+```
+*Mặc định script sẽ chạy ở chế độ Terminal để bạn chọn người chơi.*
+
+### 2. Chỉ chạy Tracking & Cropping
+Nếu bạn chỉ muốn trích xuất video người chơi mà không cần phân tích AI:
+```bash
+uv run python app/service/track_player.py --video video/your_video.mp4 --mode terminal --max-players 1 --fixed-size 300x600
 ```
 
-Hoặc cài các thư viện cần thiết qua pip:
-```bash
-pip install numpy opencv-python tqdm ultralytics
-```
-
-## Cách chạy
-
-Script chính để chạy toàn bộ pipeline là `app/service/track_player.py`.
-
-### 1. Chế độ Giao diện (GUI - Khuyến khích)
-Sử dụng chuột để click vào các khung hình người chơi và nhập tên.
-```bash
-python app/service/track_player.py --video your_video.mp4 --mode gui
-```
-
-### 2. Chế độ Terminal
-Nhận diện người chơi và yêu cầu bạn chọn qua số thứ tự trong terminal.
-```bash
-python app/service/track_player.py --video your_video.mp4 --mode terminal
-```
-
-## Các tham số (Arguments)
+## ⚙️ Các tham số chính (Arguments)
 
 | Tham số | Mô tả | Mặc định |
 | :--- | :--- | :--- |
-| `--video` | Đường dẫn tới file video đầu vào (Bắt buộc) | - |
+| `--video` | Đường dẫn file video đầu vào | `pickleball.mp4` |
+| `--output-dir`| Thư mục lưu kết quả | `output` |
 | `--mode` | Chế độ chọn người: `gui` hoặc `terminal` | `terminal` |
-| `--output-dir` | Thư mục lưu kết quả | `output` |
-| `--max-players` | Số lượng người chơi tối đa cần track | `4` |
-| `--fixed-size` | Kích thước video đầu ra (VD: `200x500`) | Tự động |
-| `--model` | Đường dẫn tới model YOLO (.pt) | `yolo11n.pt` |
-| `--frame` | Frame index dùng để chọn người chơi ban đầu | `0` |
-| `--no-black-frames` | Không chèn frame đen khi mất dấu người chơi | `False` |
+| `--max-players`| Số lượng người chơi tối đa cần track | `1` (trong main.py) |
+| `--fixed-size` | Kích thước video đầu ra (VD: `300x600`) | Tự động |
 
-## Kết quả đầu ra (Output)
+## 📁 Kết quả đầu ra (Output)
 
-Sau khi chạy xong, kết quả sẽ được lưu trong thư mục `--output-dir` (mặc định là `output/`):
-- `selected_players.json`: Chứa thông tin vị trí ban đầu và tên người chơi đã chọn.
-- `selective_tracking_data.json`: Chứa dữ liệu tọa độ của người chơi qua từng frame.
-- `[Tên_Người_Chơi].mp4`: Các video đã cắt riêng cho từng người.
+Kết quả được lưu tại thư mục `output/`:
+-   `[Tên_Người_Chơi].mp4`: Video đã được cắt theo vị trí người chơi.
+-   `[Tên_Người_Chơi]_analysis.json`: Kết quả phân tích chi tiết từ AI (bao gồm đánh giá lỗi và bài tập gợi ý).
+-   `selected_players.json`: Thông tin tọa độ ban đầu của người chơi đã chọn.
+-   `selective_tracking_data.json`: Dữ liệu tracking chi tiết qua từng frame.
 
-## Ví dụ nâng cao
-
-Chạy với video cụ thể, chọn 2 người chơi qua GUI và cố định kích thước video đầu ra:
+## 🎥 Ví dụ
+Để track và phân tích một video cụ thể:
 ```bash
-python app/service/track_player.py --video pickleball.mp4 --mode gui --max-players 2 --fixed-size 300x600
+uv run python main.py --video video/yep_pickleball_30fps.mp4
 ```
+Sau đó làm theo hướng dẫn trong terminal để chọn ID người chơi.
