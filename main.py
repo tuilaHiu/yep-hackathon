@@ -10,7 +10,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from app.service.track_player import run_interactive_tracking
-from pickleball.main import analyze_pickleball_video
+from pickleball_advice.main import analyze_pickleball_video
 
 def main():
     parser = argparse.ArgumentParser(description="Full Pipeline: Tracking -> Analysis")
