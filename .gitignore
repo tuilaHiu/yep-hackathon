@@ -12,3 +12,4 @@ wheels/
 video/
 
 app/service/output_videos
+output/*
