@@ -17,7 +17,55 @@ import numpy as np
 
 # Constants
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / "output_videos"
-FOURCC = cv2.VideoWriter_fourcc(*"mp4v")  # MP4 codec
+FOURCC = cv2.VideoWriter_fourcc(*"mp4v")  # MP4 codec (will be converted to H.264)
+
+
+def convert_to_h264(input_path: str) -> bool:
+    """
+    Convert video to H.264 codec using ffmpeg for web/VSCode compatibility.
+    
+    Args:
+        input_path: Path to the input video file.
+        
+    Returns:
+        bool: True if conversion successful, False otherwise.
+    """
+    import subprocess
+    import shutil
+    
+    input_file = Path(input_path)
+    temp_file = input_file.with_suffix(".temp.mp4")
+    
+    try:
+        # Run ffmpeg to convert to H.264
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y", "-i", str(input_file),
+                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                "-movflags", "+faststart",  # Enable fast start for web playback
+                str(temp_file)
+            ],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            # Replace original with converted file
+            shutil.move(str(temp_file), str(input_file))
+            return True
+        else:
+            print(f"FFmpeg conversion failed: {result.stderr}")
+            if temp_file.exists():
+                temp_file.unlink()
+            return False
+    except FileNotFoundError:
+        print("Warning: ffmpeg not found. Video will remain in mp4v format.")
+        return False
+    except Exception as e:
+        print(f"Error during conversion: {e}")
+        if temp_file.exists():
+            temp_file.unlink()
+        return False
 
 
 def load_tracking_data(tracking_data_path: str) -> dict[str, Any]:

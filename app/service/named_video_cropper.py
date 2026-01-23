@@ -18,6 +18,7 @@ from tqdm import tqdm
 
 from app.service.video_cropper import (
     FOURCC,
+    convert_to_h264,
     create_black_frame,
     crop_and_pad_frame,
     load_tracking_data,
@@ -214,6 +215,14 @@ def crop_named_player_videos(
 
     print(f"\nCropping complete. Processed {frame_idx} frames.")
     print(f"Output videos saved to: {output_dir_obj}")
+
+    # Convert videos to H.264 for web/VSCode compatibility
+    print("\nConverting videos to H.264 format...")
+    for video_file in output_files:
+        if convert_to_h264(video_file):
+            print(f"  ✓ Converted: {video_file}")
+        else:
+            print(f"  ✗ Failed to convert: {video_file}")
 
     return output_files
 
