@@ -4,6 +4,9 @@ import json
 import argparse
 from typing import List
 
+# Fix Qt/Wayland compatibility issue on Linux (must be set before cv2 import)
+os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+
 # Setup project path
 project_root = os.path.dirname(os.path.abspath(__file__))
 if project_root not in sys.path:

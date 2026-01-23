@@ -3,8 +3,94 @@ import json
 import os
 import argparse
 import numpy as np
+from datetime import datetime
 from ultralytics import YOLO
 from typing import List, Dict, Any, Optional
+
+
+def save_selection_screenshot(
+    frame: np.ndarray,
+    players: List[Dict[str, Any]],
+    output_dir: str,
+    video_name: str,
+    frame_index: int
+) -> str:
+    """
+    Save a screenshot with selected players annotated.
+
+    Args:
+        frame: The video frame (numpy array).
+        players: List of selected player data with 'name' and 'initial_bbox'.
+        output_dir: Directory to save the screenshot.
+        video_name: Name of the source video (for filename).
+        frame_index: Frame index used for selection.
+
+    Returns:
+        str: Path to the saved screenshot.
+    """
+    annotated_frame = frame.copy()
+
+    for p in players:
+        bbox = p["initial_bbox"]
+        name = p["name"]
+        
+        # Draw bounding box (green for selected)
+        cv2.rectangle(
+            annotated_frame,
+            (bbox["x1"], bbox["y1"]),
+            (bbox["x2"], bbox["y2"]),
+            (0, 255, 0),
+            3
+        )
+        
+        # Draw name label with background
+        label = f"{p['selection_id']}. {name}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        thickness = 2
+        (text_w, text_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
+        
+        # Background rectangle for text
+        cv2.rectangle(
+            annotated_frame,
+            (bbox["x1"], bbox["y1"] - text_h - 10),
+            (bbox["x1"] + text_w + 5, bbox["y1"]),
+            (0, 255, 0),
+            -1
+        )
+        cv2.putText(
+            annotated_frame,
+            label,
+            (bbox["x1"] + 2, bbox["y1"] - 5),
+            font,
+            font_scale,
+            (0, 0, 0),
+            thickness
+        )
+
+    # Add timestamp and info
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    info_text = f"Frame: {frame_index} | Selected: {len(players)} player(s) | {timestamp}"
+    cv2.putText(
+        annotated_frame,
+        info_text,
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2
+    )
+
+    # Create output directory if not exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Generate filename
+    base_name = os.path.splitext(video_name)[0]
+    screenshot_filename = f"{base_name}_selection_frame{frame_index}.png"
+    screenshot_path = os.path.join(output_dir, screenshot_filename)
+
+    cv2.imwrite(screenshot_path, annotated_frame)
+    return screenshot_path
 
 class PlayerSelector:
     """
@@ -37,7 +123,7 @@ class PlayerSelector:
         self.player_names: Dict[int, str] = {}
         
         self.window_name = "Player Selector - Click to Select (S: Save, Q: Quit, R: Reset, N/P: Nav)"
-        cv2.namedWindow(self.window_name)
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         cv2.setMouseCallback(self.window_name, self._on_mouse_click)
         
         self._load_frame()
@@ -52,6 +138,13 @@ class PlayerSelector:
             
         self.frame = frame
         self._run_detection()
+        
+        # Resize window to fit frame properly (max 1280x720)
+        frame_h, frame_w = self.frame.shape[:2]
+        max_w, max_h = 1280, 720
+        scale = min(max_w / frame_w, max_h / frame_h, 1.0)
+        new_w, new_h = int(frame_w * scale), int(frame_h * scale)
+        cv2.resizeWindow(self.window_name, new_w, new_h)
 
     def _run_detection(self) -> None:
         """Run YOLO detection on the current frame and filter for persons."""
@@ -132,9 +225,12 @@ class PlayerSelector:
         
         return display_frame
 
-    def run(self) -> Optional[Dict[str, Any]]:
+    def run(self, output_dir: str = ".") -> Optional[Dict[str, Any]]:
         """
         Run the GUI loop.
+
+        Args:
+            output_dir: Directory to save screenshot.
 
         Returns:
             Selected players data or None if cancelled.
@@ -146,7 +242,7 @@ class PlayerSelector:
             key = cv2.waitKey(1) & 0xFF
             
             if key == ord('s') or key == 13: # 'S' or Enter
-                return self._get_result()
+                return self._get_result(output_dir=output_dir)
             elif key == ord('q') or key == 27: # 'Q' or Esc
                 return None
             elif key == ord('r'): # 'R'
@@ -165,7 +261,7 @@ class PlayerSelector:
             if cv2.getWindowProperty(self.window_name, cv2.WND_PROP_VISIBLE) < 1:
                 return None
 
-    def _get_result(self) -> Dict[str, Any]:
+    def _get_result(self, output_dir: str = ".") -> Dict[str, Any]:
         """Format the selected data into the required JSON structure."""
         players = []
         for i in self.selected_indices:
@@ -174,11 +270,22 @@ class PlayerSelector:
                 "name": self.player_names[i],
                 "initial_bbox": self.detections[i]["bbox"]
             })
+
+        # Save selection screenshot
+        screenshot_path = save_selection_screenshot(
+            frame=self.frame,
+            players=players,
+            output_dir=output_dir,
+            video_name=os.path.basename(self.video_path),
+            frame_index=self.frame_index
+        )
+        print(f"Selection screenshot saved to: {screenshot_path}")
             
         return {
             "video_source": os.path.basename(self.video_path),
             "selection_frame": self.frame_index,
-            "players": players
+            "players": players,
+            "screenshot_path": screenshot_path
         }
 
     def __del__(self):
@@ -196,7 +303,16 @@ def select_players_gui(
     Entry point for player selection GUI.
     """
     selector = PlayerSelector(video_path, frame_index, max_players)
-    result = selector.run()
+    
+    # Determine output directory for screenshot
+    output_dir = os.path.dirname(output_path) if output_path else "."
+    if not output_dir:
+        output_dir = "."
+    
+    # Store output_dir for use in _get_result
+    selector._output_dir = output_dir
+    
+    result = selector.run(output_dir=output_dir)
     
     if result and output_path:
         try:

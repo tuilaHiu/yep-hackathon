@@ -4,8 +4,94 @@ import os
 import argparse
 import numpy as np
 import re
+from datetime import datetime
 from ultralytics import YOLO
 from typing import List, Dict, Any, Optional
+
+
+def save_selection_screenshot(
+    frame: np.ndarray,
+    players: List[Dict[str, Any]],
+    output_dir: str,
+    video_name: str,
+    frame_index: int
+) -> str:
+    """
+    Save a screenshot with selected players annotated.
+
+    Args:
+        frame: The video frame (numpy array).
+        players: List of selected player data with 'name' and 'initial_bbox'.
+        output_dir: Directory to save the screenshot.
+        video_name: Name of the source video (for filename).
+        frame_index: Frame index used for selection.
+
+    Returns:
+        str: Path to the saved screenshot.
+    """
+    annotated_frame = frame.copy()
+
+    for p in players:
+        bbox = p["initial_bbox"]
+        name = p["name"]
+        
+        # Draw bounding box (green for selected)
+        cv2.rectangle(
+            annotated_frame,
+            (bbox["x1"], bbox["y1"]),
+            (bbox["x2"], bbox["y2"]),
+            (0, 255, 0),
+            3
+        )
+        
+        # Draw name label with background
+        label = f"{p['selection_id']}. {name}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        thickness = 2
+        (text_w, text_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
+        
+        # Background rectangle for text
+        cv2.rectangle(
+            annotated_frame,
+            (bbox["x1"], bbox["y1"] - text_h - 10),
+            (bbox["x1"] + text_w + 5, bbox["y1"]),
+            (0, 255, 0),
+            -1
+        )
+        cv2.putText(
+            annotated_frame,
+            label,
+            (bbox["x1"] + 2, bbox["y1"] - 5),
+            font,
+            font_scale,
+            (0, 0, 0),
+            thickness
+        )
+
+    # Add timestamp and info
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    info_text = f"Frame: {frame_index} | Selected: {len(players)} player(s) | {timestamp}"
+    cv2.putText(
+        annotated_frame,
+        info_text,
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2
+    )
+
+    # Create output directory if not exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Generate filename
+    base_name = os.path.splitext(video_name)[0]
+    screenshot_filename = f"{base_name}_selection_frame{frame_index}.png"
+    screenshot_path = os.path.join(output_dir, screenshot_filename)
+
+    cv2.imwrite(screenshot_path, annotated_frame)
+    return screenshot_path
 
 def parse_player_input(input_str: str, max_id: int) -> List[int]:
     """
@@ -118,8 +204,19 @@ def select_players_terminal(
             cv2.putText(display_frame, f"ID: {i+1}", (bbox["x1"], bbox["y1"] - 10), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         
-        cv2.imshow("Player Selector Preview - Check Terminal", display_frame)
-        cv2.waitKey(1) # Refresh window
+        # Create resizable window and fit to reasonable screen size
+        window_name = "Player Selector Preview - Check Terminal"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        
+        # Calculate window size (fit to ~80% of typical screen, max 1280x720)
+        frame_h, frame_w = display_frame.shape[:2]
+        max_w, max_h = 1280, 720
+        scale = min(max_w / frame_w, max_h / frame_h, 1.0)
+        new_w, new_h = int(frame_w * scale), int(frame_h * scale)
+        cv2.resizeWindow(window_name, new_w, new_h)
+        
+        cv2.imshow(window_name, display_frame)
+        cv2.waitKey(1)  # Refresh window
 
     try:
         input_str = input(f"\nEnter player numbers to track (1-{len(detections)}, max {max_players}): ")
@@ -167,6 +264,20 @@ def select_players_terminal(
                 json.dump(result, f, indent=2, ensure_ascii=False)
             print(f"Selection saved to: {output_path}")
 
+        # Save selection screenshot
+        output_dir = os.path.dirname(output_path) if output_path else "."
+        if not output_dir:
+            output_dir = "."
+        screenshot_path = save_selection_screenshot(
+            frame=frame,
+            players=players,
+            output_dir=output_dir,
+            video_name=os.path.basename(video_path),
+            frame_index=frame_index
+        )
+        print(f"Selection screenshot saved to: {screenshot_path}")
+        result["screenshot_path"] = screenshot_path
+
         if show_preview:
             # Highlight selected players in preview before closing
             final_frame = frame.copy()
@@ -175,7 +286,17 @@ def select_players_terminal(
                 cv2.rectangle(final_frame, (bbox["x1"], bbox["y1"]), (bbox["x2"], bbox["y2"]), (0, 255, 0), 3)
                 cv2.putText(final_frame, p["name"], (bbox["x1"], bbox["y1"] - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-            cv2.imshow("Player Selector Preview - Confirmed", final_frame)
+            
+            # Create resizable window for confirmation
+            confirm_window = "Player Selector Preview - Confirmed"
+            cv2.namedWindow(confirm_window, cv2.WINDOW_NORMAL)
+            frame_h, frame_w = final_frame.shape[:2]
+            max_w, max_h = 1280, 720
+            scale = min(max_w / frame_w, max_h / frame_h, 1.0)
+            new_w, new_h = int(frame_w * scale), int(frame_h * scale)
+            cv2.resizeWindow(confirm_window, new_w, new_h)
+            
+            cv2.imshow(confirm_window, final_frame)
             print("Preview window updated. Press any key in the window or wait 2 seconds to close.")
             cv2.waitKey(2000)
             cv2.destroyAllWindows()
